@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CampusFlow — живое демо для жюри</title>
+<link rel="stylesheet" href="/static/styles.css">
+<style>
+.demo { max-width: 1320px; margin: 0 auto; padding: 1.5rem; }
+.demo-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.demo-top h1 { font-size: clamp(1.6rem, 3vw, 2.4rem); letter-spacing: -.5px; }
+.demo-top p { color: #9CA3AF; max-width: 46rem; margin-top: .4rem; }
+.ctrl { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
+.ctrl button { padding: .65rem 1.1rem; border-radius: var(--radius-btn); border: 1px solid var(--surface-4); background: var(--surface-2); color: #E5E7EB; font-weight: 700; cursor: pointer; }
+.ctrl button.go { background: var(--accent-secondary); color: var(--surface-0); border-color: transparent; }
+.ctrl button:disabled { opacity: .45; cursor: default; }
+.ctrl a { color: var(--accent-primary); }
+.score { display: flex; align-items: center; gap: .8rem; background: var(--surface-2); border: 1px solid var(--surface-3); border-radius: var(--radius-card); padding: .8rem 1.1rem; margin-bottom: 1.25rem; }
+.score b { font-size: 1.6rem; min-width: 4.2rem; }
+.meter { flex: 1; height: 10px; background: var(--surface-3); border-radius: 99px; overflow: hidden; }
+.meter i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary)); transition: width .5s; }
+.cols { display: grid; grid-template-columns: minmax(320px, 440px) 1fr; gap: 1.25rem; align-items: start; }
+@media (max-width: 980px) { .cols { grid-template-columns: 1fr; } }
+.steps { display: flex; flex-direction: column; gap: .6rem; }
+.step { background: var(--surface-2); border: 1px solid var(--surface-3); border-radius: var(--radius-card); padding: .85rem 1rem; transition: border-color .2s, background .2s; }
+.step.running { border-color: var(--accent-primary); background: var(--surface-3); }
+.step.ok { border-color: rgba(110, 231, 183, .5); }
+.step.fail { border-color: var(--accent-error); }
+.step-h { display: flex; gap: .7rem; align-items: center; }
+.ico { width: 1.8rem; height: 1.8rem; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--surface-4); font-weight: 800; font-size: .85rem; }
+.step.ok .ico { background: var(--accent-secondary); color: var(--surface-0); }
+.step.fail .ico { background: var(--accent-error); color: #fff; }
+.step.running .ico { background: var(--accent-primary); color: var(--surface-0); animation: pulse 1s infinite; }
+@keyframes pulse { 50% { transform: scale(1.15); } }
+.step-t { font-weight: 700; }
+.step-e { font-size: .82rem; color: #9CA3AF; }
+.code { margin-left: auto; font: 700 .8rem ui-monospace, Consolas, monospace; padding: 2px 8px; border-radius: 99px; background: var(--surface-4); white-space: nowrap; }
+.step.ok .code { background: rgba(110, 231, 183, .18); color: var(--accent-secondary); }
+.step.fail .code { background: rgba(251, 113, 133, .2); color: var(--accent-error); }
+.step-b { margin-top: .7rem; font-size: .88rem; color: #D1D5DB; }
+.step-b:empty { display: none; }
+.pill { display: inline-block; margin: 2px 4px 2px 0; padding: 3px 10px; border-radius: 99px; background: var(--surface-4); font-size: .8rem; color: inherit; text-decoration: none; }
+.pill.g { background: rgba(110, 231, 183, .18); color: var(--accent-secondary); }
+.alt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; }
+.alt-grid h5 { color: #9CA3AF; font-size: .75rem; margin-bottom: .3rem; font-weight: 600; }
+.alt-room { margin-bottom: .5rem; }
+.alt-room .bar { height: 5px; background: var(--surface-4); border-radius: 99px; margin-top: 3px; }
+.alt-room .bar i { display: block; height: 100%; background: var(--accent-primary); border-radius: 99px; }
+.lock { padding: .6rem .8rem; border-radius: 10px; background: rgba(251, 113, 133, .12); color: #FDA4AF; }
+.card2 { background: var(--surface-2); border: 1px solid var(--surface-3); border-radius: var(--radius-card); padding: 1rem 1.1rem; margin-bottom: 1.25rem; }
+.card2 h3 { font-size: 1.05rem; margin-bottom: .2rem; }
+.card2 .sub { color: #9CA3AF; font-size: .85rem; margin-bottom: .8rem; }
+.radar { overflow-x: auto; padding-bottom: .3rem; }
+.rg { display: grid; grid-template-columns: 78px repeat(9, minmax(56px, 1fr)); gap: 3px; min-width: 640px; align-items: stretch; }
+.rl { font-size: .78rem; color: #D1D5DB; display: flex; align-items: center; font-weight: 600; }
+.rh { font-size: .68rem; color: #9CA3AF; text-align: center; line-height: 1.2; }
+.c { height: 26px; border-radius: 5px; }
+.c.free { background: rgba(110, 231, 183, .28); }
+.c.busy { background: repeating-linear-gradient(135deg, #2B3550 0 4px, #1E2636 4px 8px); }
+.c.focus { box-shadow: 0 0 0 2px var(--accent-primary) inset; }
+.c.focus.free { background: rgba(56, 189, 248, .35); }
+.c.focus.busy { background: #38BDF8; }
+.c.anim { animation: flash 1.3s ease-out; }
+@keyframes flash { 0% { transform: scaleY(2.2); filter: brightness(2); } 100% { transform: none; filter: none; } }
+.legend { display: flex; gap: 1rem; font-size: .78rem; color: #9CA3AF; margin-top: .6rem; flex-wrap: wrap; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -2px; }
+.heat { display: grid; gap: 3px; font-size: .75rem; margin-top: .6rem; }
+.heat div { padding: .45rem .2rem; text-align: center; border-radius: 6px; font-weight: 700; }
+.heat .hl { text-align: left; background: none; color: #9CA3AF; font-weight: 600; }
+#log { display: flex; flex-direction: column; gap: 4px; max-height: 420px; overflow: auto; }
+details.req { background: var(--surface-1); border: 1px solid var(--surface-3); border-radius: 10px; }
+details.req summary { cursor: pointer; padding: .45rem .7rem; font: .8rem ui-monospace, Consolas, monospace; display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+details.req .m { color: var(--accent-primary); font-weight: 700; }
+details.req .st { padding: 1px 7px; border-radius: 99px; font-weight: 700; }
+.st.s2 { background: rgba(110, 231, 183, .18); color: var(--accent-secondary); }
+.st.s4 { background: rgba(251, 113, 133, .18); color: var(--accent-error); }
+details.req .who { color: #9CA3AF; margin-left: auto; }
+details.req pre { margin: 0; padding: .6rem .8rem; border-top: 1px solid var(--surface-3); font-size: .74rem; white-space: pre-wrap; word-break: break-word; max-height: 220px; overflow: auto; color: #CBD5E1; }
+details.req.new { animation: fadein .6s; }
+@keyframes fadein { from { background: rgba(56, 189, 248, .25); } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="demo">
+  <div class="demo-top">
+    <div>
+      <h1>CampusFlow — живое демо</h1>
+      <p>Страница по очереди проходит 8 сценариев приёмки на настоящем API. Слева — шаги, справа — карта занятости на завтра: бронь, конфликт и отмена видны прямо на сетке. Любой запрос можно раскрыть в журнале.</p>
+    </div>
+    <div class="ctrl">
+      <button class="go" id="run">▶ Пройти все сценарии</button>
+      <button id="next">Следующий шаг</button>
+      <button id="reset">Сбросить</button>
+      <a href="/">← приложение</a> <a href="/docs" target="_blank">Swagger</a>
+    </div>
+  </div>
+
+  <div class="score"><b id="cnt">0 / 8</b><div class="meter"><i id="bar"></i></div><span id="verdict" style="color:#9CA3AF">готов к запуску</span></div>
+
+  <div class="cols">
+    <div class="steps" id="steps"></div>
+    <div>
+      <div class="card2">
+        <h3>Карта занятости на завтра</h3>
+        <div class="sub">Каждая клетка — пара (1 ч 20 мин). Данные берутся из GET /api/rooms/{id}/free-slots.</div>
+        <div class="radar"><div class="rg" id="radar"></div></div>
+        <div class="legend"><span><i style="background:rgba(110,231,183,.4)"></i>свободно</span><span><i style="background:#2B3550"></i>занято</span><span><i style="background:#38BDF8"></i>слот текущего шага</span></div>
+      </div>
+      <div class="card2" id="viz-card" style="display:none"><h3 id="viz-title"></h3><div class="sub" id="viz-sub"></div><div id="viz"></div></div>
+      <div class="card2"><h3>Журнал запросов</h3><div class="sub">Кто, что и с каким кодом ответа. Клик — тело запроса и ответа.</div><div id="log"></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '/api';
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const plus = n => { const d = new Date(); d.setDate(d.getDate() + n); return iso(d); };
+const TOMORROW = plus(1);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const hhmm = m => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+const PW = {student1: 'password', student2: 'password', student3: 'password', admin: 'admin'};
+const tokens = {};
+const ctx = {};
+let running = false, focus = null;
+
+async function login(u) {
+    const res = await fetch(API + '/auth/login', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({login: u, password: PW[u]})});
+    if (!res.ok) throw new Error('Не удалось войти как ' + u);
+    tokens[u] = (await res.json()).access_token;
+}
+
+async function call(method, path, {as, body, quiet, label, raw} = {}) {
+    const headers = {'Content-Type': 'application/json'};
+    if (as) { if (!tokens[as]) await login(as); headers.Authorization = 'Bearer ' + tokens[as]; }
+    const t0 = performance.now();
+    const res = await fetch((raw ? '' : API) + path, {method, headers, body: body ? JSON.stringify(body) : undefined});
+    const text = await res.text();
+    let data; try { data = JSON.parse(text); } catch { data = text; }
+    const out = {status: res.status, data, ms: Math.round(performance.now() - t0)};
+    if (!quiet) logRequest(method, (raw ? '' : '/api') + path, as, body, out, label);
+    return out;
+}
+
+function logRequest(method, path, as, body, out, label) {
+    const el = document.createElement('details');
+    el.className = 'req new';
+    const json = typeof out.data === 'string' ? out.data.slice(0, 300) : JSON.stringify(out.data, null, 2).slice(0, 2500);
+    el.innerHTML = `<summary><span class="m">${method}</span><span>${esc(path)}</span><span class="st s${String(out.status)[0]}">${out.status}</span><span>${out.ms} мс</span>${label ? `<span style="color:#9CA3AF">· ${esc(label)}</span>` : ''}<span class="who">${esc(as || 'без входа')}</span></summary>` +
+        `<pre>${body ? 'Запрос:\n' + esc(JSON.stringify(body, null, 2)) + '\n\n' : ''}Ответ:\n${esc(json)}</pre>`;
+    const log = $('#log');
+    log.prepend(el);
+    while (log.children.length > 40) log.lastChild.remove();
+}
+
+// ---------- карта занятости ----------
+const PAIRS = [['08:00', '09:20'], ['09:30', '10:50'], ['11:00', '12:20'], ['12:30', '13:50'], ['14:00', '15:20'],
+    ['15:30', '16:50'], ['17:00', '18:20'], ['18:30', '19:50'], ['20:00', '21:20']];
+
+async function refreshRadar(f, anim) {
+    if (f !== undefined && f !== null) focus = f;
+    const rooms = [...ctx.rooms].sort((a, b) => a.building.localeCompare(b.building) || a.name.localeCompare(b.name));
+    const free = {};
+    await Promise.all(rooms.map(async r => {
+        const res = await call('GET', `/rooms/${r.id}/free-slots?date=${TOMORROW}`, {as: 'student1', quiet: true});
+        free[r.id] = new Set(Array.isArray(res.data) ? res.data.map(s => s.start) : []);
+    }));
+    let h = '<div></div>' + PAIRS.map(([s, e]) => `<div class="rh">${s}<br>${e}</div>`).join('');
+    for (const r of rooms) {
+        h += `<div class="rl">${esc(r.name)}</div>`;
+        for (const [start, end] of PAIRS) {
+            const isFree = free[r.id].has(start);
+            const inFocus = focus && focus.room === r.id && start === focus.from;
+            h += `<div class="c ${isFree ? 'free' : 'busy'}${inFocus ? ' focus' : ''}${inFocus && anim ? ' anim' : ''}" title="${esc(r.name)} ${start}–${end} — ${isFree ? 'свободно' : 'занято'}"></div>`;
+        }
+    }
+    $('#radar').innerHTML = h;
+}
+
+function showViz(title, sub, html) {
+    $('#viz-card').style.display = '';
+    $('#viz-title').textContent = title;
+    $('#viz-sub').textContent = sub;
+    $('#viz').innerHTML = html;
+}
+
+// ---------- шаги ----------
+const nearbyLabel = s => `${s.date === TOMORROW ? 'завтра' : s.date} ${s.start}–${s.end}`;
+
+const STEPS = [
+    {title: 'Поиск по фильтрам', expect: '200 · корпус B, 20+ мест, проектор → только B-101 и B-204', async run() {
+        const r = await call('GET', '/rooms?building=B&minCapacity=20&equipment=projector', {as: 'student1'});
+        const names = Array.isArray(r.data) ? r.data.map(x => x.name).sort() : [];
+        return {ok: r.status === 200 && names.join() === 'B-101,B-204', code: r.status,
+            html: names.map(n => `<span class="pill g">${esc(n)}</span>`).join('')};
+    }},
+    {title: 'Свободные слоты аудитории', expect: '200 · B-101 завтра: 14:00–15:00 свободен', async run() {
+        const r = await call('GET', `/rooms/${ctx.b101.id}/free-slots?date=${TOMORROW}`, {as: 'student1'});
+        const starts = new Set(Array.isArray(r.data) ? r.data.map(s => s.start) : []);
+        await refreshRadar({room: ctx.b101.id, from: '14:00', to: '15:00'}, true);
+        return {ok: r.status === 200 && starts.has('14:00'), code: r.status,
+            html: '<span class="pill g">пара 14:00–15:20 свободна</span> подсвечена на карте'};
+    }},
+    {title: 'Бронирование свободного слота', expect: '201 · бронь появляется в «Моих бронях»', async run() {
+        const r = await call('POST', '/bookings', {as: 'student1', body: {room_id: ctx.b101.id, date: TOMORROW, start_time: '14:00', end_time: '15:00', comment: 'demo: сценарий 3'}});
+        const my = await call('GET', '/bookings/my', {as: 'student1', label: 'проверка «Моих броней»'});
+        const found = r.status === 201 && Array.isArray(my.data) && my.data.some(b => b.id === r.data.id && b.status === 'active');
+        if (found) ctx.bid = r.data.id;
+        await refreshRadar(null, true);
+        return {ok: found, code: r.status, html: found ? `<span class="pill g">бронь #${r.data.id}</span> слот на карте стал занятым` : ''};
+    }},
+    {title: 'Конфликт: тот же слот занят', expect: '409 · BOOKING_CONFLICT с понятным сообщением и альтернативами', async run() {
+        const r = await call('POST', '/bookings', {as: 'student2', body: {room_id: ctx.b101.id, date: TOMORROW, start_time: '14:00', end_time: '15:00', comment: 'demo: конфликт'}});
+        const d = r.data && r.data.detail;
+        const ok = r.status === 409 && !!d && d.error === 'BOOKING_CONFLICT' && !!d.message;
+        let html = '';
+        if (ok) {
+            const alt = d.alternatives || {};
+            html = `<div style="margin-bottom:.5rem">«${esc(d.message)}»</div><div class="alt-grid"><div><h5>Тот же кабинет, другое время</h5>${(alt.nearby_slots || []).map(s => `<span class="pill">${esc(nearbyLabel(s))}</span>`).join('') || '—'}</div>` +
+                `<div><h5>Похожие свободные аудитории</h5>${(alt.similar_rooms || []).map(x => `<div class="alt-room"><b>${esc(x.room_name)}</b> <span style="color:#9CA3AF">${x.capacity} мест</span><div class="bar"><i style="width:${Math.round(x.score * 100)}%"></i></div></div>`).join('') || '—'}</div></div>`;
+        }
+        return {ok, code: r.status, html};
+    }},
+    {title: 'Отмена своей брони', expect: '200 · слот снова свободен, статус cancelled', async run() {
+        const r = await call('DELETE', `/bookings/${ctx.bid}`, {as: 'student1'});
+        const slots = await call('GET', `/rooms/${ctx.b101.id}/free-slots?date=${TOMORROW}`, {as: 'student1', label: 'слот вернулся?'});
+        const my = await call('GET', '/bookings/my', {as: 'student1', quiet: true});
+        const back = Array.isArray(slots.data) && slots.data.some(s => s.start === '14:00');
+        const cancelled = Array.isArray(my.data) && my.data.some(b => b.id === ctx.bid && b.status === 'cancelled');
+        await refreshRadar(null, true);
+        return {ok: r.status === 200 && back && cancelled, code: r.status, html: '<span class="pill g">слот снова зелёный</span><span class="pill">статус: cancelled</span>'};
+    }},
+    {title: 'Чужую бронь отменить нельзя', expect: '403 · бронь остаётся активной', async run() {
+        const mk = await call('POST', '/bookings', {as: 'student1', label: 'подготовка: бронь student1', body: {room_id: ctx.b101.id, date: TOMORROW, start_time: '14:00', end_time: '15:00', comment: 'demo: сценарий 6'}});
+        ctx.bid2 = mk.data && mk.data.id;
+        await refreshRadar(null, true);
+        const r = await call('DELETE', `/bookings/${ctx.bid2}`, {as: 'student2', label: 'student2 пытается отменить чужую'});
+        const my = await call('GET', '/bookings/my', {as: 'student1', quiet: true});
+        const still = Array.isArray(my.data) && my.data.some(b => b.id === ctx.bid2 && b.status === 'active');
+        return {ok: mk.status === 201 && r.status === 403 && still, code: r.status, html: '<div class="lock">🔒 student2 получил 403 FORBIDDEN, бронь student1 на карте осталась занятой</div>'};
+    }},
+    {title: 'Администратор: все брони и отмена любой', expect: '200 · админ видит всё; студенту админ-методы дают 403', async run() {
+        const mk = await call('POST', '/bookings', {as: 'student2', label: 'подготовка: бронь student2', body: {room_id: ctx.c315.id, date: TOMORROW, start_time: '10:00', end_time: '11:00', comment: 'demo: сценарий 7'}});
+        const all = await call('GET', '/admin/bookings', {as: 'admin'});
+        const denied = await call('GET', '/admin/bookings', {as: 'student1', label: 'студент → админ-метод'});
+        const list = Array.isArray(all.data) ? all.data : [];
+        const seesAll = mk.status === 201 && list.some(b => b.id === mk.data.id) && list.some(b => b.id === ctx.bid2);
+        // тепловая карта нагрузки по корпусам на ближайшие 5 дней (по данным админ-списка)
+        const days = [0, 1, 2, 3, 4].map(plus), blds = [...new Set(ctx.rooms.map(r => r.building))].sort();
+        const byId = Object.fromEntries(ctx.rooms.map(r => [r.id, r.building]));
+        const hours = {};
+        list.filter(b => b.status === 'active').forEach(b => {
+            const [h1, m1] = b.start_time.split(':').map(Number), [h2, m2] = b.end_time.split(':').map(Number);
+            const k = byId[b.room_id] + b.date; hours[k] = (hours[k] || 0) + ((h2 * 60 + m2) - (h1 * 60 + m1)) / 60;
+        });
+        let heat = `<div class="heat" style="grid-template-columns:70px repeat(${days.length},1fr)"><div class="hl"></div>${days.map(d => `<div class="hl">${d.slice(5)}</div>`).join('')}`;
+        blds.forEach(b => {
+            const n = ctx.rooms.filter(r => r.building === b).length;
+            heat += `<div class="hl">Корпус ${esc(b)}</div>` + days.map(d => {
+                const p = Math.min(100, Math.round(100 * (hours[b + d] || 0) / (n * 14)));
+                return `<div style="background:rgba(56,189,248,${(0.08 + Math.min(1, p / 25) * 0.8).toFixed(2)});color:${p > 12 ? '#04121c' : '#E5E7EB'}">${p}%</div>`;
+            }).join('');
+        });
+        showViz('Нагрузка по корпусам и дням', 'Доля занятых часов (08:00–22:00) по данным GET /api/admin/bookings', heat + '</div>');
+        const c1 = await call('DELETE', `/admin/bookings/${mk.data && mk.data.id}`, {as: 'admin', label: 'админ отменяет бронь student2'});
+        await call('DELETE', `/admin/bookings/${ctx.bid2}`, {as: 'admin', label: 'уборка: возвращаем слот'});
+        await refreshRadar(null, true);
+        return {ok: seesAll && c1.status === 200 && denied.status === 403, code: c1.status, html: `<span class="pill g">админ видит ${list.length} броней</span><span class="pill">студент → 403</span>`};
+    }},
+    {title: 'Запуск с нуля, документация, данные', expect: '200 · Swagger открывается, seed загружен', async run() {
+        const docs = await call('GET', '/docs', {raw: true, label: 'Swagger UI'});
+        const health = await call('GET', '/health');
+        const users = await Promise.all(['student1', 'student2', 'student3', 'admin'].map(u => login(u).then(() => true, () => false)));
+        const nb = new Set(ctx.rooms.map(r => r.building)).size;
+        return {ok: docs.status === 200 && health.status === 200 && ctx.rooms.length >= 10 && users.every(Boolean), code: docs.status,
+            html: `<span class="pill g">${ctx.rooms.length} аудиторий, ${nb} корпуса</span><span class="pill g">4 пользователя входят</span><a class="pill" href="/docs" target="_blank">/docs</a>`};
+    }},
+    {title: '⭐ Бонус: очередь ожидания', bonus: true, expect: '201 → при отмене слот автоматически достаётся первому в очереди', async run() {
+        const body = {room_id: ctx.a310.id, date: TOMORROW, start_time: '17:00', end_time: '18:00'};
+        const mk = await call('POST', '/bookings', {as: 'student1', label: 'student1 занимает слот', body: {...body, comment: 'demo: очередь'}});
+        await refreshRadar({room: ctx.a310.id, from: '17:00', to: '18:00'}, true);
+        const w = await call('POST', '/bookings/waitlist', {as: 'student2', label: 'student2 встаёт в очередь', body});
+        const c = await call('DELETE', `/bookings/${mk.data && mk.data.id}`, {as: 'student1', label: 'student1 отменяет'});
+        const my = await call('GET', '/bookings/my', {as: 'student2', label: 'бронь у student2 появилась сама?'});
+        const auto = Array.isArray(my.data) ? my.data.find(b => b.room_id === ctx.a310.id && b.date === TOMORROW && b.status === 'active' && b.start_time === '17:00') : null;
+        await refreshRadar(null, true);
+        if (auto) await call('DELETE', `/bookings/${auto.id}`, {as: 'student2', label: 'уборка'});
+        return {ok: mk.status === 201 && w.status === 201 && c.status === 200 && !!auto, code: w.status,
+            html: auto ? '<span class="pill g">слот перешёл к student2 автоматически</span>' : ''};
+    }},
+];
+
+// ---------- интерфейс ----------
+function renderSteps() {
+    $('#steps').innerHTML = STEPS.map((s, i) => `<div class="step" id="st${i}"><div class="step-h"><div class="ico">${s.bonus ? '★' : i + 1}</div><div><div class="step-t">${esc(s.title)}</div><div class="step-e">${esc(s.expect)}</div></div><span class="code" id="cd${i}">—</span></div><div class="step-b" id="sb${i}"></div></div>`).join('');
+    STEPS.forEach(s => { s.state = 'idle'; });
+    updateScore();
+}
+function setState(i, state, res) {
+    STEPS[i].state = state;
+    const el = $('#st' + i);
+    el.className = 'step ' + (state === 'running' ? 'running' : state);
+    el.querySelector('.ico').textContent = state === 'ok' ? '✓' : state === 'fail' ? '✗' : STEPS[i].bonus ? '★' : i + 1;
+    if (res) { $('#cd' + i).textContent = res.code; $('#sb' + i).innerHTML = res.html || ''; }
+    if (state === 'running') el.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+    updateScore();
+}
+function updateScore() {
+    const main = STEPS.filter(s => !s.bonus), ok = main.filter(s => s.state === 'ok').length, failed = main.some(s => s.state === 'fail');
+    $('#cnt').textContent = `${ok} / ${main.length}`;
+    $('#bar').style.width = (100 * ok / main.length) + '%';
+    $('#verdict').textContent = failed ? 'есть непрошедшие сценарии' : ok === main.length ? 'все сценарии приёмки пройдены ✓' : running ? 'идёт проверка…' : 'готов к запуску';
+    $('#verdict').style.color = failed ? 'var(--accent-error)' : ok === main.length ? 'var(--accent-secondary)' : '#9CA3AF';
+}
+
+async function cleanup() {
+    for (const u of ['student1', 'student2']) {
+        const my = await call('GET', '/bookings/my', {as: u, quiet: true});
+        for (const b of (Array.isArray(my.data) ? my.data : []).filter(b => b.status === 'active' && (b.comment || '').startsWith('demo:'))) {
+            await call('DELETE', `/bookings/${b.id}`, {as: u, quiet: true});
+        }
+    }
+}
+
+async function runStep(i) {
+    setState(i, 'running');
+    await sleep(350);
+    let res;
+    try { res = await STEPS[i].run(); } catch (e) { res = {ok: false, code: 'ERR', html: `<div class="lock">${esc(e.message)}</div>`}; }
+    setState(i, res.ok ? 'ok' : 'fail', res);
+}
+function lock(on) { running = on; ['run', 'next', 'reset'].forEach(id => { $('#' + id).disabled = on; }); updateScore(); }
+
+async function resetState(keepLock) {
+    if (!keepLock) lock(true);
+    await cleanup();
+    focus = null;
+    $('#viz-card').style.display = 'none';
+    $('#log').innerHTML = '';
+    renderSteps();
+    await refreshRadar();
+    if (!keepLock) lock(false);
+}
+async function runAll() {
+    lock(true);
+    await resetState(true);
+    for (let i = 0; i < STEPS.length; i++) { await runStep(i); await sleep(900); }
+    lock(false);
+}
+async function nextStep() {
+    lock(true);
+    let i = STEPS.findIndex(s => s.state === 'idle');
+    if (i === -1) { await resetState(true); i = 0; }
+    if (i === 0) await cleanup();
+    await runStep(i);
+    lock(false);
+}
+
+async function init() {
+    renderSteps();
+    try {
+        await Promise.all(['student1', 'student2', 'admin'].map(login));
+        const r = await call('GET', '/rooms', {as: 'student1', quiet: true});
+        ctx.rooms = r.data;
+        ctx.b101 = ctx.rooms.find(x => x.name === 'B-101');
+        ctx.c315 = ctx.rooms.find(x => x.name === 'C-315');
+        ctx.a310 = ctx.rooms.find(x => x.name === 'A-310');
+        if (!ctx.b101 || !ctx.c315 || !ctx.a310) throw new Error('В базе нет seed-данных (B-101, C-315, A-310). Удалите campusflow.db и перезапустите run.py');
+        await refreshRadar();
+    } catch (e) {
+        $('#verdict').textContent = 'ошибка: ' + e.message;
+        $('#verdict').style.color = 'var(--accent-error)';
+        ['run', 'next', 'reset'].forEach(id => { $('#' + id).disabled = true; });
+    }
+}
+$('#run').onclick = runAll;
+$('#next').onclick = nextStep;
+$('#reset').onclick = () => resetState(false);
+init();
+</script>
+</body>
+</html>

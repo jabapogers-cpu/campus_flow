@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusFlow — Умное бронирование аудиторий</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <!-- Экран входа -->
+    <div id="login-screen" class="screen active">
+        <div class="login-container">
+            <h1>CampusFlow</h1>
+            <p class="subtitle">Умное бронирование аудиторий</p>
+            
+            <div class="quick-login">
+                <p>Быстрый вход для демо:</p>
+                <button class="quick-btn student" onclick="quickLogin('student1', 'password')">
+                    Студент 1
+                </button>
+                <button class="quick-btn student" onclick="quickLogin('student2', 'password')">
+                    Студент 2
+                </button>
+                <button class="quick-btn admin" onclick="quickLogin('admin', 'admin')">
+                    Администратор
+                </button>
+            </div>
+            
+            <div class="divider">или введите данные</div>
+            
+            <form id="login-form" onsubmit="handleLogin(event)">
+                <input type="text" id="login-input" placeholder="Логин" required>
+                <input type="password" id="password-input" placeholder="Пароль" required>
+                <button type="submit">Войти</button>
+                <div id="login-error" class="error hidden"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Главный экран -->
+    <div id="main-screen" class="screen">
+        <nav class="navbar">
+            <div class="nav-brand">CampusFlow</div>
+            <div class="nav-links">
+                <a href="#" class="nav-link active" data-view="search">Поиск</a>
+                <a href="#" class="nav-link" data-view="bookings">Мои брони</a>
+                <a href="#" class="nav-link" data-view="waitlist">Очередь</a>
+                <a href="#" class="nav-link admin-only hidden" data-view="admin">Админ</a>
+            </div>
+            <div class="nav-user">
+                <span id="user-name"></span>
+                <button onclick="logout()" class="btn-secondary">Выйти</button>
+            </div>
+        </nav>
+
+        <main class="content">
+            <!-- Вид: Поиск аудиторий -->
+            <div id="view-search" class="view active">
+                <h2>Поиск аудиторий</h2>
+                
+                <div class="filters">
+                    <select id="filter-building">
+                        <option value="">Все корпуса</option>
+                        <option value="A">Корпус A</option>
+                        <option value="B">Корпус B</option>
+                        <option value="C">Корпус C</option>
+                    </select>
+                    
+                    <input type="number" id="filter-capacity" placeholder="Мин. вместимость" min="1">
+                    
+                    <input type="date" id="filter-date" title="Дата">
+                    <input type="time" id="filter-start" step="900" title="Начало (для рекомендаций)">
+                    <input type="time" id="filter-end" step="900" title="Конец (для рекомендаций)">
+
+                    <div class="equip-filter" id="filter-equipment" role="group" aria-label="Оборудование">
+                        <label class="equip-item"><input type="checkbox" value="projector"> 📽 Проектор</label>
+                        <label class="equip-item"><input type="checkbox" value="whiteboard"> 🖊 Доска</label>
+                        <label class="equip-item"><input type="checkbox" value="computers"> 💻 Компьютеры</label>
+                        <label class="equip-item"><input type="checkbox" value="smartboard"> 🖥 Интерактивная доска</label>
+                    </div>
+                    
+                    <button onclick="searchRooms()" class="btn-primary">Найти</button>
+                    <button onclick="getRecommendations()" class="btn-accent">Рекомендации</button>
+                </div>
+
+                <div id="rooms-grid" class="rooms-grid"></div>
+                
+                <!-- Модальное окно слотов -->
+                <div id="slots-modal" class="modal hidden">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3 id="modal-room-name"></h3>
+                            <button onclick="closeModal()" class="modal-close">×</button>
+                        </div>
+                        <div id="modal-room-info" class="room-info"></div>
+                        <div id="slots-grid" class="slots-grid"></div>
+                        <div id="booking-form" class="booking-form hidden">
+                            <textarea id="booking-comment" placeholder="Комментарий (необязательно)"></textarea>
+                            <p id="slot-hint" class="slot-hint"></p>
+                            <button id="book-btn" onclick="confirmBooking()" class="btn-primary">Забронировать</button>
+                            <button id="waitlist-btn" onclick="joinWaitlistFromSlot()" class="btn-accent hidden">Встать в очередь</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Модальное окно конфликта -->
+                <div id="conflict-modal" class="modal hidden">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>Слот занят</h3>
+                            <button onclick="closeConflictModal()" class="modal-close">×</button>
+                        </div>
+                        <p id="conflict-message"></p>
+                        <div class="alternatives">
+                            <div class="alt-section">
+                                <h4>Свободные слоты рядом</h4>
+                                <div id="nearby-slots"></div>
+                            </div>
+                            <div class="alt-section">
+                                <h4>Похожие аудитории</h4>
+                                <div id="similar-rooms"></div>
+                            </div>
+                        </div>
+                        <button onclick="joinWaitlist()" class="btn-accent">Встать в очередь</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Вид: Мои брони -->
+            <div id="view-bookings" class="view">
+                <h2>Мои брони</h2>
+                <div id="bookings-list" class="bookings-list"></div>
+            </div>
+
+            <!-- Вид: Очередь -->
+            <div id="view-waitlist" class="view">
+                <h2>Моя очередь</h2>
+                <div id="waitlist-list" class="bookings-list"></div>
+            </div>
+
+            <!-- Вид: Админ -->
+            <div id="view-admin" class="view admin-only">
+                <h2>Панель администратора</h2>
+                
+                <div class="admin-tabs">
+                    <button class="tab-btn active" data-tab="all-bookings">Все брони</button>
+                    <button class="tab-btn" data-tab="rooms-mgmt">Управление аудиториями</button>
+                    <button class="tab-btn" data-tab="stats">Статистика</button>
+                </div>
+
+                <div id="admin-all-bookings" class="admin-tab active">
+                    <div class="filters">
+                        <select id="admin-filter-building">
+                            <option value="">Все корпуса</option>
+                            <option value="A">Корпус A</option>
+                            <option value="B">Корпус B</option>
+                            <option value="C">Корпус C</option>
+                        </select>
+                        <input type="date" id="admin-filter-from">
+                        <input type="date" id="admin-filter-to">
+                        <button onclick="loadAdminBookings()" class="btn-primary">Фильтр</button>
+                        <button onclick="exportCSV()" class="btn-secondary">Экспорт CSV</button>
+                    </div>
+                    <div id="admin-bookings-list" class="bookings-list"></div>
+                </div>
+
+                <div id="admin-rooms-mgmt" class="admin-tab">
+                    <button onclick="showAddRoomForm()" class="btn-primary">Добавить аудиторию</button>
+                    <div id="admin-rooms-list" class="rooms-grid"></div>
+                </div>
+
+                <div id="admin-stats" class="admin-tab">
+                    <div id="stats-summary" class="stats-summary"></div>
+                    <div id="stats-heatmap" class="stats-chart"></div>
+                    <div id="stats-buildings" class="stats-chart"></div>
+                    <div id="stats-days" class="stats-chart"></div>
+                    <div id="stats-top-rooms" class="stats-chart"></div>
+                </div>
+            </div>
+
+            <!-- Модальное окно: добавление / изменение аудитории -->
+            <div id="room-modal" class="modal hidden">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 id="room-modal-title">Новая аудитория</h3>
+                        <button type="button" onclick="closeRoomModal()" class="modal-close">×</button>
+                    </div>
+                    <form id="room-form" class="room-form" onsubmit="submitRoomForm(event)">
+                        <input type="hidden" id="rf-id">
+                        <label>Название<input id="rf-name" required maxlength="30" placeholder="например, B-301"></label>
+                        <div class="rf-row">
+                            <label>Корпус<input id="rf-building" required maxlength="3" list="rf-buildings" placeholder="A, B, C">
+                                <datalist id="rf-buildings"><option value="A"><option value="B"><option value="C"></datalist></label>
+                            <label>Этаж<input id="rf-floor" type="number" min="1" max="30" required value="1"></label>
+                            <label>Вместимость<input id="rf-capacity" type="number" min="1" max="1000" required placeholder="мест"></label>
+                        </div>
+                        <fieldset class="rf-equip" id="rf-equipment">
+                            <legend>Оборудование</legend>
+                            <label class="equip-item"><input type="checkbox" value="projector"> 📽 Проектор</label>
+                            <label class="equip-item"><input type="checkbox" value="whiteboard"> 🖊 Доска</label>
+                            <label class="equip-item"><input type="checkbox" value="computers"> 💻 Компьютеры</label>
+                            <label class="equip-item"><input type="checkbox" value="smartboard"> 🖥 Интерактивная доска</label>
+                        </fieldset>
+                        <button type="submit" class="btn-primary">Сохранить</button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

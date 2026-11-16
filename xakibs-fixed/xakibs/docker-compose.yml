@@ -1,0 +1,14 @@
+services:
+  campusflow:
+    build: .
+    container_name: campusflow
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - CAMPUSFLOW_DB_URL=sqlite:////app/data/campusflow.db
+    volumes:
+      - campusflow-data:/app/data
+    restart: unless-stopped
+volumes:
+  campusflow-data:
